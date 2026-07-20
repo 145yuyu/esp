@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: ""
+title: 中心节点工程根配置 (ESP32-S3)
+scope:
+    - CMakeLists.txt
+    - platformio.ini
+    - sdkconfig.defaults
+    - .gitignore
+source_files: []
+depends_on: []
+related_to: []

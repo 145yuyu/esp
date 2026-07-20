@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>城市公园环境多点监测系统 — 毕业设计</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ============ 侧边栏导航 ============ -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <div>
+            <div class="brand-title">公园环境监测</div>
+            <div class="brand-sub">ESP32 IoT System</div>
+        </div>
+    </div>
+
+    <div class="sidebar-nav">
+        <a class="nav-item active" data-page="dashboard">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span> 实时监控
+        </a>
+        <a class="nav-item" data-page="history">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span> 历史数据
+        </a>
+        <a class="nav-item" data-page="alarms">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span> 告警管理
+            <span class="nav-badge" id="alarmBadge"></span>
+        </a>
+        <a class="nav-item" data-page="analytics">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> 分区对比分析
+        </a>
+        <a class="nav-item" data-page="nodes">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></span> 节点管理
+        </a>
+        <a class="nav-item" data-page="settings">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg></span> 系统配置
+        </a>
+        <a class="nav-item" data-page="logs">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> 运行日志
+        </a>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="system-status-dot-sm" id="sysStatusDot"></div>
+        <div>
+            <div id="sysStatusText">系统正常</div>
+            <div class="brand-sub" id="sysUptime">运行 00:00:00</div>
+        </div>
+    </div>
+</nav>
+
+<!-- ============ 主内容区 ============ -->
+<main class="main-content">
+
+	    <!-- 手机端遮罩层 -->
+	    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- 顶部栏 -->
+    <header class="topbar">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="菜单">☰</button>
+	        <h2 class="page-title" id="pageTitle"> 实时监控仪表盘</h2>
+        <div class="topbar-right">
+            <span class="topbar-clock" id="topbarClock">--:--:--</span>
+            <span class="topbar-date" id="topbarDate">----年--月--日</span>
+            <button class="btn btn-sm" id="btnExport" title="导出当前数据"> 导出CSV</button>
+            <button class="btn btn-sm btn-outline" id="btnRefresh" title="手动刷新"> 刷新</button>
+        </div>
+    </header>
+
+    <!-- 页面容器 -->
+    <div class="page-container">
+
+        <!-- ====== 页面1: 实时监控 ====== -->
+        <div class="page active" id="page-dashboard">
+            <!-- 顶部统计卡片行 -->
+            <div class="stat-cards" id="statCards">
+                <div class="stat-card">
+                    <div class="stat-card-icon" style="background:#0c4a6e"></div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-label">园区平均温度</div>
+                        <div class="stat-card-value" id="statAvgTemp">--°C</div>
+                        <div class="stat-card-sub" id="statTempRange">--</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon" style="background:#14532d"></div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-label">园区平均湿度</div>
+                        <div class="stat-card-value" id="statAvgHum">--%</div>
+                        <div class="stat-card-sub" id="statHumRange">--</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon" style="background:#713f12"></div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-label">园区平均粉尘浓度</div>
+                        <div class="stat-card-value" id="statAvgSmoke">--</div>
+                        <div class="stat-card-sub" id="statSmokeLabel">--</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon" style="background:#7c2d12"></div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-label">活跃告警</div>
+                        <div class="stat-card-value" id="statAlarmCount">0</div>
+                        <div class="stat-card-sub" id="statAlarmSub">--</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-icon" style="background:#4a1d6d"></div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-label">在线节点</div>
+                        <div class="stat-card-value" id="statOnlineNodes">4/4</div>
+                        <div class="stat-card-sub" id="statCommStatus">通信正常</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表 + 节点 双栏 -->
+            <div class="dash-grid">
+                <div class="dash-chart-area">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"> 实时趋势图</h3>
+                            <div class="chart-tabs" id="dashChartTabs">
+                                <button class="tab active" data-type="dust">粉尘浓度</button>
+                                <button class="tab" data-type="temp">温度</button>
+                                <button class="tab" data-type="humidity">湿度</button>
+                                <button class="tab" data-type="dust_peak">粉尘峰值</button>
+                            </div>
+                        </div>
+                        <div class="chart-box"><canvas id="dashTrendChart"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="panel-title">各节点实时数据对比</h3>
+                        <div class="chart-box chart-box-sm"><canvas id="dashBarChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="dash-nodes-area">
+                    <div class="panel">
+                        <h3 class="panel-title">监测节点</h3>
+                        <div class="node-list" id="dashNodeList"></div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="panel-title"> 最新告警</h3>
+                        <div class="mini-alert-list" id="dashAlertMini"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 页面2: 历史数据 ====== -->
+        <div class="page" id="page-history">
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title"> 历史数据查询</h3>
+                    <div class="history-controls">
+                        <select id="histNodeSelect" class="select">
+                            <option value="all">全部节点</option>
+                            <option value="1">节点1 - 入口广场</option>
+                            <option value="2">节点2 - 健身活动区</option>
+                            <option value="3">节点3 - 湖区周边</option>
+                            <option value="4">节点4 - 林荫步道</option>
+                        </select>
+                        <select id="histMetricSelect" class="select">
+                            <option value="dust">粉尘浓度</option>
+                            <option value="temp">温度</option>
+                            <option value="humidity">湿度</option>
+                            <option value="dust_peak">粉尘峰值</option>
+                        </select>
+                        <div class="time-quick-btns">
+                            <button class="btn btn-sm btn-ghost time-preset" data-range="3600000">近1小时</button>
+                            <button class="btn btn-sm btn-ghost time-preset" data-range="21600000">近6小时</button>
+                            <button class="btn btn-sm btn-ghost time-preset" data-range="86400000">今日</button>
+                            <button class="btn btn-sm btn-ghost time-preset" data-range="604800000">近7天</button>
+                        </div>
+                        <input type="datetime-local" id="histStart" class="input" title="开始时间">
+                        <span>至</span>
+                        <input type="datetime-local" id="histEnd" class="input" title="结束时间">
+                        <button class="btn btn-primary" id="histQueryBtn">查询</button>
+                    </div>
+                </div>
+                <div class="chart-box chart-box-lg"><canvas id="histChart"></canvas></div>
+            </div>
+            <div class="panel" style="margin-top:16px">
+                <h3 class="panel-title"> 历史数据记录</h3>
+                <div class="table-wrap">
+                    <table class="data-table" id="histTable">
+                        <thead><tr>
+                            <th>时间</th><th>节点</th><th>区域</th><th>温度(°C)</th><th>湿度(%)</th><th>粉尘浓度</th><th>粉尘峰值</th><th>空气质量</th>
+                        </tr></thead>
+                        <tbody id="histTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="histCount">共 0 条记录</span>
+                    <div>
+                        <button class="btn btn-sm" id="histPrev">上一页</button>
+                        <span id="histPage">1/1</span>
+                        <button class="btn btn-sm" id="histNext">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 页面3: 告警管理 ====== -->
+        <div class="page" id="page-alarms">
+            <div class="alarm-stats-row" id="alarmStatsRow">
+                <div class="alarm-stat total"><div class="num" id="asTotal">0</div>总告警</div>
+                <div class="alarm-stat warning"><div class="num" id="asWarning">0</div>警告</div>
+                <div class="alarm-stat danger"><div class="num" id="asDanger">0</div>危险</div>
+                <div class="alarm-stat critical"><div class="num" id="asCritical">0</div>严重</div>
+                <div class="alarm-stat fault"><div class="num" id="asFault">0</div>故障</div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title"> 告警记录</h3>
+                    <div>
+                        <select id="alarmFilterLevel" class="select select-sm">
+                            <option value="all">全部级别</option>
+                            <option value="warning">警告</option>
+                            <option value="danger">危险</option>
+                            <option value="critical">严重</option>
+                            <option value="fault">故障</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline" id="alarmClearBtn">清空已处理</button>
+                    </div>
+                </div>
+                <div class="alarm-table-wrap" id="alarmTableWrap">
+                    <table class="data-table" id="alarmTable">
+                        <thead><tr>
+                            <th>时间</th><th>级别</th><th>节点</th><th>区域</th><th>告警内容</th><th>状态</th><th>操作</th>
+                        </tr></thead>
+                        <tbody id="alarmTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 页面4: 分区对比分析 ====== -->
+        <div class="page" id="page-analytics">
+            <div class="analytics-grid">
+                <div class="panel">
+                    <h3 class="panel-title"> 各区域温度对比 (24h)</h3>
+                    <div class="chart-box"><canvas id="analyticsTempBar"></canvas></div>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title"> 各区域粉尘浓度对比 (24h)</h3>
+                    <div class="chart-box"><canvas id="analyticsSmokeBar"></canvas></div>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title"> 环境综合雷达图</h3>
+                    <div class="chart-box"><canvas id="analyticsRadar"></canvas></div>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title"> 分区统计数据表</h3>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>区域</th><th>平均温度</th><th>最高温度</th><th>最低温度</th><th>平均湿度</th><th>粉尘浓度均值</th><th>粉尘浓度峰值</th><th>数据量</th>
+                            </tr></thead>
+                            <tbody id="analyticsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 页面5: 节点管理 ====== -->
+        <div class="page" id="page-nodes">
+            <div class="nodes-mgmt-grid" id="nodesMgmtGrid"></div>
+        </div>
+
+        <!-- ====== 页面6: 系统配置 ====== -->
+        <div class="page" id="page-settings">
+            <div class="settings-grid">
+                <div class="panel">
+                    <h3 class="panel-title"> 预警阈值配置</h3>
+                    <div class="form-group">
+                        <label>粉尘浓度警告阈值 (ug/m³)</label>
+                        <input type="range" min="20" max="200" value="75" class="range" id="cfgDustWarning">
+                        <span class="range-val" id="cfgDustWarningVal">75</span>
+                    </div>
+                    <div class="form-group">
+                        <label>粉尘浓度危险阈值 (ug/m³)</label>
+                        <input type="range" min="50" max="300" value="115" class="range" id="cfgDustDanger">
+                        <span class="range-val" id="cfgDustDangerVal">115</span>
+                    </div>
+                    <div class="form-group">
+                        <label>高温预警阈值 (°C)</label>
+                        <input type="range" min="30" max="50" value="38" step="0.5" class="range" id="cfgTempWarning">
+                        <span class="range-val" id="cfgTempWarningVal">38</span>
+                    </div>
+                    <div class="form-group">
+                        <label>高湿预警阈值 (%)</label>
+                        <input type="range" min="80" max="100" value="95" class="range" id="cfgHumWarning">
+                        <span class="range-val" id="cfgHumWarningVal">95</span>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title"> 系统参数</h3>
+                    <div class="form-group">
+                        <label>数据刷新间隔 (秒)</label>
+                        <select class="select" id="cfgRefreshInterval">
+                            <option value="1">1 秒</option>
+                            <option value="2" selected>2 秒</option>
+                            <option value="5">5 秒</option>
+                            <option value="10">10 秒</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>历史数据保留时长</label>
+                        <select class="select" id="cfgHistoryRetention">
+                            <option value="3600">1 小时</option>
+                            <option value="86400" selected>24 小时</option>
+                            <option value="604800">7 天</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>心跳检测间隔 (秒)</label>
+                        <select class="select" id="cfgHeartbeatInterval">
+                            <option value="5">5 秒</option>
+                            <option value="10" selected>10 秒</option>
+                            <option value="15">15 秒</option>
+                            <option value="30">30 秒</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>滑动滤波窗口大小</label>
+                        <select class="select" id="cfgFilterWindow">
+                            <option value="3">3</option>
+                            <option value="5" selected>5</option>
+                            <option value="7">7</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="cfgSaveBtn">保存配置</button>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title">数据源配置</h3>
+                    <div class="form-group">
+                        <label>数据源类型</label>
+                        <select class="select" id="cfgDataSourceType">
+                            <option value="backend" selected>后端 API（默认）</option>
+                            <option value="simulation">模拟数据（前端本地生成）</option>
+                            <option value="http">ESP32 HTTP API（直连）</option>
+                            <option value="websocket">ESP32 WebSocket（直连）</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="dsUrlGroup" style="display:none">
+                        <label>ESP32 中心节点地址</label>
+                        <input type="text" class="input" id="cfgDataSourceUrl"
+                               value="http://192.168.1.100/api/sensors"
+                               placeholder="http://192.168.1.100/api/sensors"
+                               style="width:100%">
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+                            ESP32 AP模式: http://192.168.4.1/api/sensors<br>
+                            ESP32 STA模式: http://[路由器分配的IP]/api/sensors
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="cfgApplyDS"> 应用数据源</button>
+                    <span id="cfgDSStatus" style="margin-left:8px;font-size:12px;color:var(--text-muted)"></span>
+                </div>
+                <div class="panel">
+                    <h3 class="panel-title"> 数据管理</h3>
+                    <div class="form-group">
+                        <button class="btn btn-outline" id="cfgExportCSV"> 导出全部历史数据 (CSV)</button>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-outline" id="cfgExportAlarms"> 导出告警记录 (CSV)</button>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-outline" id="cfgExportLogs"> 导出运行日志 (CSV)</button>
+                    </div>
+                    <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+                        <button class="btn btn-danger" id="cfgClearData">清除所有历史数据</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 页面7: 运行日志 ====== -->
+        <div class="page" id="page-logs">
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title"> 系统运行日志</h3>
+                    <div>
+                        <select id="logFilterLevel" class="select select-sm">
+                            <option value="all">全部</option>
+                            <option value="info">信息</option>
+                            <option value="warn">警告</option>
+                            <option value="error">错误</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline" id="logClearBtn">清空日志</button>
+                    </div>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-empty">暂无日志记录</div>
+                </div>
+                <div class="table-footer">
+                    <span id="logCount">共 0 条</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/data-source.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "TFT_eSPI",
+  "version": "2.5.43-patched",
+  "keywords": "Arduino, tft, display, ttgo, LilyPi, WT32-SC01, ePaper, display, Pico, RP2040 Nano Connect, RP2040, STM32, ESP8266, NodeMCU, ESP32, M5Stack, ILI9341, ST7735, ILI9163, S6D02A1, ILI9481, ILI9486, ILI9488, ST7789, ST7796, RM68140, SSD1351, SSD1963, ILI9225, HX8357D, GC9A01, R61581",
+  "description": "TFT_eSPI 2.5.43 with ESP32-S3 REG_SPI_BASE fix in Processors/TFT_eSPI_ESP32_S3.h (upstream #ifndef guard fails after soc.h)",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/Bodmer/TFT_eSPI"
+  },
+  "authors":
+  [
+    {
+        "name": "Bodmer",
+        "email": "bodmer@anola.net",
+        "maintainer": true
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "raspberrypi, espressif8266, espressif32, ststm32",
+  "headers": "TFT_eSPI.h"
+}

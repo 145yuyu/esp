@@ -1,0 +1,20 @@
+# ============================================================
+#  PlatformIO 构建产物忽略
+# ============================================================
+
+# PlatformIO 构建缓存
+.pio/
+
+# 生成的二进制文件
+*.bin
+*.elf
+*.map
+
+# compile_commands.json (IDE 生成)
+compile_commands.json
+
+# IDE
+.vscode/ipch/
+.vscode/.browse.c_cpp_properties.json
+.vscode/c_cpp_properties.json
+.vscode/launch.json
